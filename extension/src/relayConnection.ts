@@ -247,14 +247,23 @@ export class RelayConnection {
             sessionId,
           };
         }
-      } else {
-        // Main tab session
+      } else if (sessionId) {
+        // IMPORTANT: Chrome Extension API does not support sessionIds for iframes/workers
+        // that are auto-attached via Target.setAutoAttach. These sessionIds are generated
+        // by Chrome but cannot be used with chrome.debugger.sendCommand().
+        // We need to send the command without sessionId (to the main frame) or skip it.
         debuggerSession = {
           ...this._debuggee,
-          sessionId,
+          // Don't pass the sessionId - Chrome extension API doesn't support it
+        };
+        debugLog(`Warning: Ignoring unsupported sessionId ${sessionId} for command ${method}`);
+      } else {
+        // Main tab session (no sessionId)
+        debuggerSession = {
+          ...this._debuggee,
         };
       }
-      
+
       // Forward CDP command to chrome.debugger
       return await chrome.debugger.sendCommand(
           debuggerSession,
